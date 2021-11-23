@@ -15,6 +15,8 @@ const BOX_SIZE = 70;
 
 const Row = ({ item }) => {
   const translateX = useSharedValue(0);
+  const widthX1 = useSharedValue(0);
+  const widthX2 = useSharedValue(0);
 
   const onGestureEvent = useAnimatedGestureHandler({
     onStart: (_, ctx) => {
@@ -22,17 +24,27 @@ const Row = ({ item }) => {
     },
     onActive: ({ translationX }, ctx) => {
       translateX.value = clamp(ctx.x + translationX, -width, 0);
+      widthX1.value = Math.abs(translateX.value) / 2;
+      widthX2.value = Math.abs(translateX.value) / 2;
     },
     onEnd: ({ velocityX }) => {
       const dest = snapPoint(translateX.value, velocityX, SNAP_POINTS);
       if (dest === 0) {
         translateX.value = withTiming(0, { duration: 400 });
+        widthX1.value = withTiming(0, { duration: 400 });
+        widthX2.value = withTiming(0, { duration: 400 });
       } else if (dest === -width / 3) {
         translateX.value = withTiming(-BOX_SIZE * 2, { duration: 400 });
+        widthX1.value = withTiming(BOX_SIZE, { duration: 400 });
+        widthX2.value = withTiming(BOX_SIZE, { duration: 400 });
       } else if (dest === (-2 * width) / 3) {
         translateX.value = withTiming(-BOX_SIZE * 4, { duration: 400 });
+        widthX1.value = withTiming(BOX_SIZE * 2, { duration: 400 });
+        widthX2.value = withTiming(BOX_SIZE * 2, { duration: 400 });
       } else {
         translateX.value = withTiming(-width, { duration: 400 });
+        widthX1.value = withTiming(width, { duration: 400 });
+        widthX2.value = 0;
       }
     },
   });
@@ -43,18 +55,40 @@ const Row = ({ item }) => {
     };
   });
 
+  const style1 = useAnimatedStyle(() => {
+    return {
+      width: widthX1.value,
+      left: -widthX1.value,
+    };
+  });
+
+  const style2 = useAnimatedStyle(() => {
+    return {
+      width: widthX2.value,
+      left: -3 * widthX2.value,
+    };
+  });
+
   return (
-    <PanGestureHandler {...{ onGestureEvent }}>
-      <Animated.View style={[styles.detailRow, style]}>
-        <Image source={{ uri: item.photo }} style={styles.image} />
-        <View style={styles.nameDetails}>
-          <Text>
-            {item.first_name} {item.last_name}
-          </Text>
-          <Text>{item.email}</Text>
-        </View>
-      </Animated.View>
-    </PanGestureHandler>
+    <View style={styles.rowArrange}>
+      <PanGestureHandler {...{ onGestureEvent }}>
+        <Animated.View style={[styles.detailRow, style]}>
+          <Image source={{ uri: item.photo }} style={styles.image} />
+          <View style={styles.nameDetails}>
+            <Text>
+              {item.first_name} {item.last_name}
+            </Text>
+            <Text>{item.email}</Text>
+          </View>
+        </Animated.View>
+      </PanGestureHandler>
+      <Animated.View
+        style={[{ backgroundColor: "red", height: "100%" }, style1]}
+      />
+      <Animated.View
+        style={[{ backgroundColor: "green", height: "100%" }, style2]}
+      />
+    </View>
   );
 };
 
@@ -64,6 +98,7 @@ const styles = StyleSheet.create({
   detailRow: {
     flexDirection: "row",
     padding: 10,
+    width: width,
   },
   image: {
     width: 50,
@@ -73,5 +108,8 @@ const styles = StyleSheet.create({
   nameDetails: {
     flexDirection: "column",
     marginHorizontal: 10,
+  },
+  rowArrange: {
+    flexDirection: "row",
   },
 });
