@@ -12,15 +12,7 @@ import { clamp, snapPoint } from "react-native-redash";
 import * as Haptics from "expo-haptics";
 
 const { width } = Dimensions.get("window");
-const SNAP_POINTS = [-width, -(2 * width) / 3, -width / 3, 0];
-const BOX_SIZE = 70;
-const BUFFER_FEEDBACK = 10;
-
-const withinRangeFeedback = (x, min, max, type) => {
-  if (x >= min && x <= max) {
-    runOnJS(vibrateMe)(type);
-  }
-};
+const SNAP_POINTS = [-width, -width / 2, (-3 * width) / 8, -width / 4, 0];
 
 const vibrateMe = (type) => {
   Haptics.notificationAsync(type);
@@ -36,44 +28,30 @@ const Row = ({ item }) => {
       ctx.x = translateX.value;
     },
     onActive: ({ translationX }, ctx) => {
-      translateX.value = clamp(ctx.x + translationX, -width, 0);
-      widthX1.value = Math.abs(translateX.value) / 2;
-      if (
-        Math.abs(ctx.x + translationX) > width / 3 &&
-        Math.abs(ctx.x + translationX) < (2 * width) / 3
-      ) {
-        widthX2.value = withTiming((2 * width) / 3, { duration: 400 });
-      } else if (Math.abs(ctx.x + translationX) > (2 * width) / 3) {
-        widthX2.value = withTiming(width, { duration: 400 });
+      const movementValue = ctx.x + translationX;
+      translateX.value = clamp(movementValue, -width, 0);
+      widthX1.value = movementValue / 2;
+      if (movementValue < -width / 2) {
+        widthX2.value = movementValue;
       } else {
-        widthX2.value = Math.abs(translateX.value) / 2;
+        widthX2.value = movementValue / 2;
       }
-      runOnJS(withinRangeFeedback)(
-        Math.abs(Math.ceil(ctx.x + translationX)),
-        Math.ceil(width / 3),
-        Math.ceil(width / 3) + BUFFER_FEEDBACK,
-        Haptics.NotificationFeedbackType.Warning
-      );
     },
     onEnd: ({ velocityX }) => {
       const dest = snapPoint(translateX.value, velocityX, SNAP_POINTS);
-      if (dest === 0) {
+      if (dest === SNAP_POINTS[4]) {
         translateX.value = withTiming(0, { duration: 400 });
         widthX1.value = withTiming(0, { duration: 400 });
         widthX2.value = withTiming(0, { duration: 400 });
-      } else if (dest === -width / 3) {
-        translateX.value = withTiming(-BOX_SIZE * 2, { duration: 400 });
-        widthX1.value = withTiming(BOX_SIZE, { duration: 400 });
-        widthX2.value = withTiming(BOX_SIZE, { duration: 400 });
-      } else if (dest === (-2 * width) / 3) {
-        translateX.value = withTiming(-BOX_SIZE * 4, { duration: 400 });
-        widthX1.value = withTiming(BOX_SIZE * 2, { duration: 400 });
-        widthX2.value = withTiming(BOX_SIZE * 2, { duration: 400 });
-      } else {
-        translateX.value = withTiming(-width, { duration: 400 });
-        widthX1.value = 0;
-        widthX2.value = withTiming(width, { duration: 400 });
+      } else if (dest <= SNAP_POINTS[1]) {
+        translateX.value = withTiming(SNAP_POINTS[0], { duration: 200 });
+        widthX1.value = withTiming(SNAP_POINTS[0], { duration: 200 });
+        widthX2.value = withTiming(SNAP_POINTS[0], { duration: 200 });
         runOnJS(vibrateMe)(Haptics.NotificationFeedbackType.Success);
+      } else {
+        translateX.value = withTiming(SNAP_POINTS[2], { duration: 400 });
+        widthX1.value = withTiming(SNAP_POINTS[2] / 2, { duration: 400 });
+        widthX2.value = withTiming(SNAP_POINTS[2] / 2, { duration: 400 });
       }
     },
   });
@@ -86,15 +64,15 @@ const Row = ({ item }) => {
 
   const style1 = useAnimatedStyle(() => {
     return {
-      width: 2 * widthX1.value,
-      left: -2 * widthX1.value,
+      width: Math.abs(2 * widthX1.value),
+      left: 2 * widthX1.value,
     };
   });
 
   const style2 = useAnimatedStyle(() => {
     return {
-      width: widthX2.value,
-      left: -widthX2.value,
+      width: Math.abs(widthX2.value),
+      left: widthX2.value,
     };
   });
 
@@ -152,3 +130,36 @@ const styles = StyleSheet.create({
     backgroundColor: "#4A6FA3",
   },
 });
+
+// const onGestureEvent = useAnimatedGestureHandler({
+//     onStart: (_, ctx) => {
+//       ctx.x = translateX.value;
+//     },
+//     onActive: ({ translationX, velocityX }, ctx) => {
+//       const dest = snapPoint(translateX.value, velocityX, SNAP_POINTS);
+//       const movementValue = ctx.x + translationX;
+//       translateX.value = clamp(movementValue, -width, 0);
+//       widthX1.value = movementValue / 2;
+//       if (SNAP_POINTS[1] > dest) {
+//         translateX.value = withTiming(dest, { duration: 100 });
+//         widthX1.value = withTiming(dest, { duration: 700 });
+//         widthX2.value = withTiming(dest, { duration: 500 });
+//       } else {
+//         widthX2.value = movementValue / 2;
+//       }
+//     },
+//     onEnd: ({ velocityX }) => {
+//       const dest = snapPoint(translateX.value, velocityX, SNAP_POINTS);
+//       if (dest === SNAP_POINTS[4]) {
+//         translateX.value = withTiming(0, { duration: 400 });
+//         widthX1.value = withTiming(0, { duration: 400 });
+//         widthX2.value = withTiming(0, { duration: 400 });
+//       } else if (dest === SNAP_POINTS[0]) {
+//         runOnJS(vibrateMe)(Haptics.NotificationFeedbackType.Success);
+//       } else {
+//         translateX.value = withTiming(SNAP_POINTS[2], { duration: 400 });
+//         widthX1.value = withTiming(SNAP_POINTS[2] / 2, { duration: 400 });
+//         widthX2.value = withTiming(SNAP_POINTS[2] / 2, { duration: 400 });
+//       }
+//     },
+//   });
